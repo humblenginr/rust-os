@@ -1,0 +1,24 @@
+[package]
+name = "rust-os"
+version = "0.1.0"
+edition = "2021"
+
+# we are disbaling unwinding(https://os.phil-opp.com/freestanding-rust-binary/#disabling-unwinding)
+# so that we don't have to worry about the missing `eh_personality` language item which is necessary for the unwinding implementation, which is in the standard library
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bootloader = "0.9.8"
+volatile = "0.2.6"
+spin = "0.5.2"
+x86_64 = "0.14.10"
+
+[dependencies.lazy_static]
+version = "1.0"
+features = ["spin_no_std"]
