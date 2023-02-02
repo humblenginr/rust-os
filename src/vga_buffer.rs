@@ -74,7 +74,12 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: core::fmt::Arguments) {
-    WRITER.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+    // we run this in an interrupt-free environment to prevent deadlocks.
+    // deadlocks happen when a thread tries to acquire a lock that can never become free.
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    });
 }
 
 pub struct Writer {

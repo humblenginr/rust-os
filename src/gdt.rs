@@ -2,13 +2,14 @@
  * This module creates a new GlobalDescriptorTable (GDT), which is used for memory segmentation
  * purposes and intializes a new TaskStateSegment (TSS) which has a new entry in the
  * InterruptStackTable to be used for preventing triple faults when stack overflow occurs by
- * switching to this newly created stack
+ * switching to this newly initialized stack
  */
 use lazy_static::lazy_static;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector};
 use x86_64::structures::tss::TaskStateSegment;
 use x86_64::VirtAddr;
 
+// newly created stack table index
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
 pub fn init() {
@@ -46,9 +47,10 @@ lazy_static! {
 }
 
 lazy_static! {
-    // GlobalDescriptorTable (GDT) is the legacy standard for memory segmentation between processes
+    // GlobalDescriptorTable (GDT) is the legacy standard for memory segmentation between
+    // processes.
     // Nowadays Paging is used. But this is still kept in x86 architectures for backward
-    // compatibility and user-space to kernel stapce switching and some other needs.
+    // compatibility and for user-space to kernel stapce switching and some other needs.
     // We are creating a GDT and adding out TSS entry into it.
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();

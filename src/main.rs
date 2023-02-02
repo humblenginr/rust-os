@@ -14,7 +14,7 @@
 
 use core::panic::PanicInfo;
 
-use rust_os::println;
+use rust_os::{hlt_loop, println};
 
 // we have removed the default `main` function since we don't have the underlying runtime system to call it
 // we now overwrite this with our own `_start` function
@@ -24,7 +24,7 @@ use rust_os::println;
 // extern "C" here means that the function should be called with C calling convention
 pub extern "C" fn _start() -> ! {
     rust_os::init();
-    loop {}
+    hlt_loop();
 }
 
 // panic_handler, as the name suggests, is what knows how to handle a `panic`
@@ -32,5 +32,5 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    hlt_loop();
 }

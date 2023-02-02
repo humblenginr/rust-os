@@ -14,10 +14,16 @@ panic = "abort"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# for translating the scan_codes from our keyboard
+pc-keyboard = "0.5.0"
 bootloader = "0.9.8"
 volatile = "0.2.6"
+# a replacement for std::sync (since we don't have std libraries available)
 spin = "0.5.2"
+# contains instructions set and helpers for the x86_64 microprocessors
 x86_64 = "0.14.10"
+# for configuring Intel 8259 PIC (Programmable Interface Controller)
+pic8259 = "0.10.1"
 
 [dependencies.lazy_static]
 version = "1.0"
