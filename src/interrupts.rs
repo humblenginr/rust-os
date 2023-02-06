@@ -1,10 +1,12 @@
-use crate::print;
 use crate::{gdt, println};
+use crate::{hlt_loop, print};
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin;
 use x86_64::instructions::port::Port;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::structures::idt::{
+    InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode, PageFaultHandlerFunc,
+};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
@@ -42,6 +44,7 @@ lazy_static! {
         idt.breakpoint.set_handler_fn(breakpoint_handler);
         idt[InterruptsIndex::Timer.as_usize()].set_handler_fn(timer_interrupt_handler);
         idt[InterruptsIndex::Keyboard.as_usize()].set_handler_fn(keypress_interrupt_handler);
+        idt.page_fault.set_handler_fn(page_fault_handler);
         unsafe {
             idt.double_fault.set_handler_fn(double_fault_handler)
                 // Currently, we only have a single Stack. Whevener a page fault occurs due to stack overflow,
@@ -72,6 +75,21 @@ pub fn init_idt() {
 // that all the registers are preserved - which is done by `x86-interrupt` calling convention
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
     println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+}
+
+extern "x86-interrupt" fn page_fault_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: PageFaultErrorCode,
+) {
+    use x86_64::registers::control::Cr2;
+
+    println!("EXCEPTION: PAGE FAULT");
+    // CR2 register is automatically set up by the operating system and contains the virtual
+    // address that caused the page fault
+    println!("ACCESSED ADDRESS: {:?}", Cr2::read());
+    println!("Error Code: {:?}", error_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
 }
 
 extern "x86-interrupt" fn keypress_interrupt_handler(_stack_frame: InterruptStackFrame) {

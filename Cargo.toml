@@ -16,7 +16,7 @@ panic = "abort"
 [dependencies]
 # for translating the scan_codes from our keyboard
 pc-keyboard = "0.5.0"
-bootloader = "0.9.8"
+bootloader = { version = "0.9.23", features = ["map_physical_memory"] }
 volatile = "0.2.6"
 # a replacement for std::sync (since we don't have std libraries available)
 spin = "0.5.2"
