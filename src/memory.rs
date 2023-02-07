@@ -1,8 +1,53 @@
+use bootloader::bootinfo::{MemoryMap, MemoryRegionType};
 use x86_64::{
     registers::control::Cr3,
-    structures::paging::{OffsetPageTable, PageTable},
+    structures::paging::{
+        FrameAllocator, Mapper, OffsetPageTable, Page, PageTable, PhysFrame, Size4KiB,
+    },
     PhysAddr, VirtAddr,
 };
+
+// Frame allocator created from the memory map provided by the BootInfo struct from the
+// bootloader.
+pub struct BootInfoFrameAllocator {
+    memory_map: &'static MemoryMap,
+    next: usize,
+}
+
+impl BootInfoFrameAllocator {
+    // Creates a frame allocator from the given memory map
+    //
+    // This function is unsafe because the caller has to guarantee that the `USABLE` memory regions
+    // given by the memory map are in fact usable.
+    pub unsafe fn init(mmap: &'static MemoryMap) -> Self {
+        BootInfoFrameAllocator {
+            memory_map: mmap,
+            next: 0,
+        }
+    }
+    // Returns an iterator over the usable frames specified in the memory map.
+    pub fn usable_frames(&self) -> impl Iterator<Item = PhysFrame> {
+        let memory_regions = self.memory_map.iter();
+        // filter only the regions marked `USABLE`
+        let usable_regions = memory_regions.filter(|r| r.region_type == MemoryRegionType::Usable);
+        let addr_range = usable_regions.map(|r| r.range.start_addr()..r.range.end_addr());
+        let phy_frame_addresses = addr_range.flat_map(|a| a.step_by(4096));
+        phy_frame_addresses.map(|addr| PhysFrame::containing_address(PhysAddr::new(addr)))
+    }
+}
+
+unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
+    // This functoin just returns a usable frame
+    //
+    // In the context of mapping a Virtual Page to a Physical Frame, this function is used when
+    // there is a need to create a new PageTable (because the pagetable does not exist). This
+    // function provides a usable frame that can be used for the pagetable to be created.
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+        let frame = self.usable_frames().nth(self.next);
+        self.next += 1;
+        frame
+    }
+}
 
 // Initialize a new OffsetPageTable
 //

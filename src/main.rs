@@ -15,8 +15,12 @@
 use core::panic::PanicInfo;
 
 use bootloader::{entry_point, BootInfo};
-use rust_os::{hlt_loop, memory::active_level4_page_table, println};
-use x86_64::VirtAddr;
+use rust_os::{
+    hlt_loop,
+    memory::{self, create_example_mapping, EmptyFrameAllocator},
+    println,
+};
+use x86_64::{structures::paging::Page, VirtAddr};
 
 // the `entry_point` macro allows us to use this function as a normal rust function but in the
 // backend it wraps it in the `_start` func with 'C' calling convention and uses `[no_mangle]`
@@ -33,12 +37,14 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     rust_os::init();
 
     let phy_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let l4_table = unsafe { active_level4_page_table(phy_mem_offset) };
-    for (i, entry) in l4_table.iter().enumerate() {
-        if !entry.is_unused() {
-            println!("L4 Entry {}: {:?}", i, entry);
-        }
-    }
+    let mut frame_allocator = EmptyFrameAllocator;
+    let mut mapper = unsafe { memory::init(phy_mem_offset) };
+    // we will map the 0th address in the virtual address space
+    let page_to_be_mapped = Page::containing_address(VirtAddr::new(0));
+    create_example_mapping(page_to_be_mapped, &mut mapper, &mut frame_allocator);
+
+    let page_ptr: *mut u64 = page_to_be_mapped.start_address().as_mut_ptr();
+    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) }
 
     hlt_loop();
 }
