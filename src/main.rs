@@ -12,12 +12,18 @@
 // we are using this attribute to tell the rust compiler that we don't want the normal entry point chain
 #![no_main]
 
+extern crate alloc;
 use core::panic::PanicInfo;
 
+use alloc::{
+    boxed::Box,
+    rc::Rc,
+    vec::{self, Vec},
+};
 use bootloader::{entry_point, BootInfo};
 use rust_os::{
-    hlt_loop,
-    memory::{self, create_example_mapping, EmptyFrameAllocator},
+    allocator, hlt_loop,
+    memory::{self, BootInfoFrameAllocator},
     println,
 };
 use x86_64::{structures::paging::Page, VirtAddr};
@@ -36,15 +42,11 @@ entry_point!(kernel_main);
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     rust_os::init();
 
-    let phy_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
-    let mut frame_allocator = EmptyFrameAllocator;
-    let mut mapper = unsafe { memory::init(phy_mem_offset) };
-    // we will map the 0th address in the virtual address space
-    let page_to_be_mapped = Page::containing_address(VirtAddr::new(0));
-    create_example_mapping(page_to_be_mapped, &mut mapper, &mut frame_allocator);
-
-    let page_ptr: *mut u64 = page_to_be_mapped.start_address().as_mut_ptr();
-    unsafe { page_ptr.offset(400).write_volatile(0x_f021_f077_f065_f04e) }
+    // Initialize Heap
+    let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    let mut mapper = unsafe { memory::init(phys_mem_offset) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
+    allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
 
     hlt_loop();
 }

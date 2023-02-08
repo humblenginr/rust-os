@@ -1,9 +1,9 @@
 # the rust core library is preshipped with the rust compiler and is only available for default targets
 # since we are using our own custom target, we need to recompile the core library for those targets
-# below line tells the compiler that it should recompile the `core` and `compiler_builtins`
+# below line tells the compiler that it should recompile the `core`, `compiler_builtins` and `alloc` crates
 # note that this is available only in the nightly version of rust as of now
 [unstable]
-build-std = ["core", "compiler_builtins"]
+build-std = ["core", "compiler_builtins", "alloc"]
 # some memory related built-in functions are disabled by default since in normal cases, they will be provided by the standard C library
 # but since we don't have access to that now, we are enabling those features in the next line
 build-std-features = ["compiler-builtins-mem"]

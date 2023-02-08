@@ -1,7 +1,16 @@
 #![feature(abi_x86_interrupt)]
 #![no_std]
 #![no_main]
+#![feature(alloc_error_handler)]
 
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
+}
+
+extern crate alloc;
+
+pub mod allocator;
 pub mod gdt;
 pub mod interrupts;
 pub mod memory;
