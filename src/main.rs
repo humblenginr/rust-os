@@ -15,18 +15,13 @@
 extern crate alloc;
 use core::panic::PanicInfo;
 
-use alloc::{
-    boxed::Box,
-    rc::Rc,
-    vec::{self, Vec},
-};
 use bootloader::{entry_point, BootInfo};
 use rust_os::{
     allocator, hlt_loop,
     memory::{self, BootInfoFrameAllocator},
     println,
 };
-use x86_64::{structures::paging::Page, VirtAddr};
+use x86_64::VirtAddr;
 
 // the `entry_point` macro allows us to use this function as a normal rust function but in the
 // backend it wraps it in the `_start` func with 'C' calling convention and uses `[no_mangle]`

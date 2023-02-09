@@ -1,9 +1,8 @@
-use core::{
-    alloc::{GlobalAlloc, Layout},
-    ptr::null_mut,
-};
+pub mod bump;
+pub mod fixed_size_block;
 
 use linked_list_allocator::LockedHeap;
+use spin::MutexGuard;
 use x86_64::{
     structures::paging::{
         mapper::MapToError, FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB,
@@ -11,9 +10,11 @@ use x86_64::{
     VirtAddr,
 };
 
+use self::bump::BumpAllocator;
+
 // calling Box::new() will use this allocator to allocate and deallocate dynamic memory (from the Heap region)
 #[global_allocator]
-static ALLOCATOR: LockedHeap = LockedHeap::empty();
+static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
 
 pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024;
@@ -43,4 +44,29 @@ pub fn init_heap(
         ALLOCATOR.lock().init(HEAP_START, HEAP_SIZE);
     }
     Ok(())
+}
+
+// a wrapper around spin::Mutex to permit trait implementations.
+pub struct Locked<A> {
+    inner: spin::Mutex<A>,
+}
+
+impl<A> Locked<A> {
+    // This function is defined as a const fn so that it can be used for initializing the static
+    // ALLOCATOR
+    pub const fn new(inner: A) -> Self {
+        Locked {
+            inner: spin::Mutex::new(inner),
+        }
+    }
+    pub fn lock(&self) -> MutexGuard<A> {
+        self.inner.lock()
+    }
+}
+
+// Align the given address `addr` upwards to alignment `align`.
+//
+// Requires that `align` is a power of two.
+fn align_up(addr: usize, align: usize) -> usize {
+    (addr + align - 1) & !(align - 1)
 }
