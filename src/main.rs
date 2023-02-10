@@ -5,8 +5,7 @@
 // we won't have access to things like file system, threads, networking etc.
 #![no_std]
 // the execution of any program does not directly start with main
-// a `runtime system` is initalized before that
-// in case of rust, `crt0`, a C runtime is initialized which does things like creating stack, placing arguments in the register etc.
+// a `runtime system` is initalized before that in case of rust, `crt0`, a C runtime is initialized which does things like creating stack, placing arguments in the register etc.
 // after that, it will call the rust entry point(not the `main` function), which will do some minimal things and call `main`
 // but for a free-standing binray, we don't have acces to `crt0`
 // we are using this attribute to tell the rust compiler that we don't want the normal entry point chain
@@ -20,6 +19,11 @@ use rust_os::{
     allocator, hlt_loop,
     memory::{self, BootInfoFrameAllocator},
     println,
+    task::{
+        keyboard,
+        simple_executor::{self, SimpleExecutor},
+        Task,
+    },
 };
 use x86_64::VirtAddr;
 
@@ -42,6 +46,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
     allocator::init_heap(&mut mapper, &mut frame_allocator).expect("heap initialization failed");
+
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(keyboard::print_keypresses())); // new
+    executor.run();
 
     hlt_loop();
 }

@@ -1,3 +1,4 @@
+use crate::task::keyboard::add_scancode;
 use crate::{gdt, println};
 use crate::{hlt_loop, print};
 use lazy_static::lazy_static;
@@ -110,15 +111,9 @@ extern "x86-interrupt" fn keypress_interrupt_handler(_stack_frame: InterruptStac
     let mut port = Port::new(0x60);
     // we read the data from the port
     let scan_code: u8 = unsafe { port.read() };
+    // adding the scan_code to the task queue
+    add_scancode(scan_code);
 
-    if let Ok(Some(key_event)) = keyboard.add_byte(scan_code) {
-        if let Some(key) = keyboard.process_keyevent(key_event) {
-            match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
-                DecodedKey::RawKey(key) => print!("{:?}", key),
-            }
-        }
-    }
     // the PIC expects us to send an `end of interrupt (EOI)` signal from the handler
     unsafe {
         PICS.lock()
